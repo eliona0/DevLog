@@ -2,27 +2,31 @@
 const db = require('../config/db');
 
 // Create Post
+// PostController.js (createPost)
 exports.createPost = async (req, res) => {
+  const { title, content, featured_image, category_id, is_published, tags } = req.body;
+  
   try {
-    const user_id = req.user.id;
-    const { title, content, featured_image = null, category_id = null, is_published = 0 } = req.body;
+    // 1. Create the post
+    const [result] = await db.query(
+      'INSERT INTO posts (title, content, featured_image, category_id, is_published) VALUES (?, ?, ?, ?, ?)',
+      [title, content, featured_image, category_id, is_published]
+    );
+    const postId = result.insertId;
 
-    if (!title || !content) {
-      return res.status(400).json({ error: 'Title and content are required' });
+    // 2. Insert into post_tags table
+    if (tags && tags.length) {
+      const values = tags.map(tagId => [postId, tagId]);
+      await db.query('INSERT INTO post_tags (post_id, tag_id) VALUES ?', [values]);
     }
 
-    const [result] = await db.query(
-      `INSERT INTO posts (user_id, title, content, featured_image, is_published, category_id)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [user_id, title, content, featured_image, is_published, category_id]
-    );
-
-    res.status(201).json({ message: 'Post created', postId: result.insertId });
+    res.status(201).json({ message: 'Post created', postId });
   } catch (err) {
-    console.error('Create post error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create post' });
   }
 };
+
 
 // Get all posts
 exports.getAllPosts = async (req, res) => {
@@ -36,20 +40,35 @@ exports.getAllPosts = async (req, res) => {
 };
 
 // Get post by ID
+// Get single post by ID with tags
 exports.getPostById = async (req, res) => {
-  const postId = req.params.id;
+  const postId = req.params.id; // assume URL is /api/posts/:id
 
   try {
+    // Fetch post info
     const [posts] = await db.query('SELECT * FROM posts WHERE id = ?', [postId]);
 
-    if (posts.length === 0) return res.status(404).json({ error: 'Post not found' });
+    if (posts.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
 
-    res.json(posts[0]);
+    // Fetch tags associated with this post
+    const [tags] = await db.query(`
+      SELECT t.id, t.name
+      FROM tags t
+      JOIN post_tags pt ON t.id = pt.tag_id
+      WHERE pt.post_id = ?
+    `, [postId]);
+
+    // Return combined data
+    res.json({ ...posts[0], tags });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch post' });
   }
 };
+
 
 // Update post
 exports.updatePost = async (req, res) => {

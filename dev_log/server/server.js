@@ -26,6 +26,10 @@ app.use('/api/posts', postRoutes);    // për postimet
 const categoryRoutes = require('./routes/categoryRoutes');
 app.use('/api/categories', categoryRoutes);
 
+const tagRoutes = require('./routes/tagRoutes');
+app.use('/api/tags', tagRoutes);
+
+
 
 app.get('/', (req, res) => {
   res.send('DevLog API is running...');

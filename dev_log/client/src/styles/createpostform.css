@@ -64,3 +64,8 @@
 .submit-button:hover {
   background-color: #1e40af;
 }
+
+.create-post-form select[multiple] {
+  min-height: 120px;
+}
+

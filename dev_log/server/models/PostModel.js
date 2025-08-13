@@ -1,14 +1,36 @@
 const db = require('../config/db');
 
 const PostModel = {
-  create: async (userId, title, content, featuredImage, categoryId, isPublished) => {
-    const [result] = await db.execute(
-      `INSERT INTO posts 
-       (user_id, title, content, featured_image, category_id, is_published) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, title, content, featuredImage, categoryId, isPublished]
-    );
-    return result;
+  create: async (userId, title, content, featuredImage, categoryId, isPublished, tags) => {
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [result] = await conn.execute(
+        `INSERT INTO posts 
+         (user_id, title, content, featured_image, category_id, is_published) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [userId, title, content, featuredImage, categoryId, isPublished]
+      );
+
+      const postId = result.insertId;
+
+      if (tags && tags.length > 0) {
+        const tagValues = tags.map(tagId => [postId, tagId]);
+        await conn.query(
+          `INSERT INTO post_tag (post_id, tag_id) VALUES ?`,
+          [tagValues]
+        );
+      }
+
+      await conn.commit();
+      return postId;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 
   getAll: async () => {

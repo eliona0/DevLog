@@ -9,9 +9,11 @@ function CreatePostForm() {
     featured_image: '',
     category_id: '',
     is_published: false,
+    tags: [] // store selected tag IDs
   });
 
   const [categories, setCategories] = useState([]);
+  const [tags, setTags] = useState([]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -22,41 +24,69 @@ function CreatePostForm() {
         console.error('Failed to load categories:', error);
       }
     };
+
+    const fetchTags = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/tags');
+        setTags(res.data);
+      } catch (error) {
+        console.error('Failed to load tags:', error);
+      }
+    };
+
     fetchCategories();
+    fetchTags();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+const handleChange = (e) => {
+  const { name, value, type, checked, multiple, options } = e.target;
+
+  if (multiple) {
+    const selectedValues = Array.from(options)
+      .filter(option => option.selected)
+      .map(option => option.value);
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: selectedValues
     }));
-  };
-
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  const token = localStorage.getItem('token'); // get token saved at login
-
-  if (!token) {
-    alert('You must be logged in to create a post.');
-    return;
-  }
-
-  try {
-    await axios.post(
-      'http://localhost:5000/api/posts',
-      formData,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    alert('Post created successfully!');
-    // Reset form or do other things
-  } catch (error) {
-    console.error('Failed to create post:', error);
+  } else {
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   }
 };
 
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to create a post.');
+      return;
+    }
+
+    try {
+      await axios.post(
+        'http://localhost:5000/api/posts',
+        formData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert('Post created successfully!');
+      setFormData({
+        title: '',
+        content: '',
+        featured_image: '',
+        category_id: '',
+        is_published: false,
+        tags: []
+      });
+    } catch (error) {
+      console.error('Failed to create post:', error);
+    }
+  };
 
   return (
     <div className="create-post-container">
@@ -100,6 +130,31 @@ function CreatePostForm() {
             <option key={cat.id} value={cat.id}>{cat.name}</option>
           ))}
         </select>
+
+<label>Tags</label>
+<div className="tags-checkboxes">
+  {tags.map(tag => (
+    <label key={tag.id}>
+      <input
+        type="checkbox"
+        name="tags"
+        value={tag.id}
+        checked={formData.tags.includes(tag.id.toString())}
+        onChange={(e) => {
+          const value = e.target.value;
+          setFormData(prev => ({
+            ...prev,
+            tags: prev.tags.includes(value)
+              ? prev.tags.filter(v => v !== value)
+              : [...prev.tags, value]
+          }));
+        }}
+      />
+      #{tag.name}
+    </label>
+  ))}
+</div>
+
 
         <div className="checkbox-wrapper">
           <input

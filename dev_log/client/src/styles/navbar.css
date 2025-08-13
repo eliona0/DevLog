@@ -1,0 +1,117 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+    background: linear-gradient(135deg, #1e293b, #334155);
+  color: white;
+}
+
+.navbar-left .logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+}
+
+.navbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.search-bar {
+  width: 60%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+}
+
+.navbar-right {
+  display: flex;
+  /* gap: 10px; */
+}
+
+.nav-button {
+  padding: 8px 16px;
+  border: none;
+  background-color: transparent;
+  color: white;
+  border: 1px solid white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.nav-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-button.primary {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  margin-left: 10px;
+}
+
+.nav-button.primary:hover {
+  background-color: #2563eb;
+}
+.user-info{
+    display: flex;
+}
+
+.dropdown {
+  position: relative;
+  margin-left: 20px;
+  height: 40px;
+  /* background-color: #f87171; */
+  img{
+    width: 40px;
+    height: 40px;
+    border-radius: 100%;
+  }
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background-color: #1e293b;
+  color: white;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  min-width: 180px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dropdown-username {
+  font-weight: bold;
+  padding: 10px 16px;
+  border-bottom: 1px solid #475569;
+  background-color: #334155;
+}
+
+.dropdown-menu button {
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.95rem;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-menu button:hover {
+  background-color: #475569;
+}
+
+.dropdown-menu .signout-btn {
+  color: #f87171;
+  border-top: 1px solid #475569;
+}

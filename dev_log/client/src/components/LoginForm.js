@@ -14,9 +14,7 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   try {
     const res = await axios.post('http://localhost:5000/api/auth/login', formData);
-
-    // ✅ Save token and user
-    localStorage.setItem('token', res.data.token); // <-- Add this line
+    localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
 
     navigate('/');

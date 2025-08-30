@@ -4,13 +4,13 @@ const router = express.Router();
 const tagController = require('../controllers/TagController');
 const authenticateToken = require('../middleware/authMiddleware');
 
-// Public routes
-router.get('/', tagController.getAllTags); // Get all tags
-router.get('/:id', tagController.getTagById); // Get tag by ID
+
+router.get('/', tagController.getAllTags); 
+router.get('/:id', tagController.getTagById);
 
 // Protected routes (need to be logged in)
-router.post('/', authenticateToken, tagController.createTag); // Create a new tag
-router.put('/:id', authenticateToken, tagController.updateTag); // Update a tag
-router.delete('/:id', authenticateToken, tagController.deleteTag); // Delete a tag
+router.post('/', authenticateToken, tagController.createTag); 
+router.put('/:id', authenticateToken, tagController.updateTag);
+router.delete('/:id', authenticateToken, tagController.deleteTag);
 
 module.exports = router;

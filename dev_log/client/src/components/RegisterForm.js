@@ -19,12 +19,12 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   try {
     const res = await axios.post('http://localhost:5000/api/auth/register', formData);
-    alert('User registered ✅');
+    alert('User registered');
     console.log(res.data);
     onSwitch(); 
   } catch (err) {
     console.error(err);
-    alert('Registration failed ❌');
+    alert('Registration failed');
   }
 };
 

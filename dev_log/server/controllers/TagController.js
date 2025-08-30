@@ -1,8 +1,7 @@
 const db = require('../config/db');
 
-// Get all tags
 exports.getAllTags = async (req, res) => {
-  console.log('GET /api/tags called'); // Add this line
+  console.log('GET /api/tags called'); 
   try {
     const [tags] = await db.query('SELECT * FROM tags ORDER BY name ASC');
     res.status(200).json(tags);
@@ -12,7 +11,6 @@ exports.getAllTags = async (req, res) => {
   }
 };
 
-// Get tag by ID
 exports.getTagById = async (req, res) => {
   const tagId = req.params.id;
 
@@ -28,7 +26,6 @@ exports.getTagById = async (req, res) => {
   }
 };
 
-// Create a new tag
 exports.createTag = async (req, res) => {
   const { name } = req.body;
 
@@ -47,7 +44,6 @@ exports.createTag = async (req, res) => {
   }
 };
 
-// Update a tag
 exports.updateTag = async (req, res) => {
   const tagId = req.params.id;
   const { name } = req.body;
@@ -67,7 +63,7 @@ exports.updateTag = async (req, res) => {
   }
 };
 
-// Delete a tag
+
 exports.deleteTag = async (req, res) => {
   const tagId = req.params.id;
 

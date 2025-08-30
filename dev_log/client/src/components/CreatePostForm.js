@@ -58,35 +58,51 @@ const handleChange = (e) => {
 };
 
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('You must be logged in to create a post.');
-      return;
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('You must be logged in to create a post.');
+    return;
+  }
+
+  try {
+    const data = new FormData();
+    data.append('title', formData.title);
+    data.append('content', formData.content);
+    data.append('category_id', formData.category_id);
+    data.append('is_published', formData.is_published ? 1 : 0);
+    formData.tags.forEach(tag => data.append('tags[]', tag));
+    if (formData.featured_image) {
+      data.append('featured_image', formData.featured_image);
     }
 
-    try {
-      await axios.post(
-        'http://localhost:5000/api/posts',
-        formData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    await axios.post(
+      'http://localhost:5000/api/posts',
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
 
-      alert('Post created successfully!');
-      setFormData({
-        title: '',
-        content: '',
-        featured_image: '',
-        category_id: '',
-        is_published: false,
-        tags: []
-      });
-    } catch (error) {
-      console.error('Failed to create post:', error);
-    }
-  };
+    alert('Post created successfully!');
+    setFormData({
+      title: '',
+      content: '',
+      featured_image: '',
+      category_id: '',
+      is_published: false,
+      tags: []
+    });
+  } catch (error) {
+    console.error('Failed to create post:', error);
+  }
+};
+
 
   return (
     <div className="create-post-container">
@@ -110,13 +126,18 @@ const handleChange = (e) => {
           required
         />
 
-        <label>Featured Image URL</label>
+        <label>Featured Image</label>
         <input
-          type="text"
+          type="file"
           name="featured_image"
-          value={formData.featured_image}
-          onChange={handleChange}
+          onChange={(e) => {
+            setFormData(prev => ({
+              ...prev,
+              featured_image: e.target.files[0] // store the File object
+            }));
+          }}
         />
+
 
         <label>Category</label>
         <select

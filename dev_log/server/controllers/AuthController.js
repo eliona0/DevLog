@@ -6,7 +6,6 @@ const register = async (req, res) => {
   try {
     const { username, email, password, fullName, role, bio } = req.body;
 
-    // kontrollo nëse username ose email ekziston
     const existingUserByEmail = await User.findByEmail(email);
     if (existingUserByEmail) {
       return res.status(400).json({ error: 'Email already exists' });
@@ -42,7 +41,6 @@ const login = async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    // përjashto fjalëkalimin nga user-i që kthehet
     const { password: pw, ...userWithoutPassword } = user;
 
     res.status(200).json({ message: 'Login successful', token, user: userWithoutPassword });

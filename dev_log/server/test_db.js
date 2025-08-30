@@ -1,12 +1,11 @@
-// test_db.js
+
 const mysql = require('mysql2/promise');
 
-// Krijo konfigurimin e lidhjes me DB - ndrysho sipas teje
 const config = {
   host: 'localhost',
   user: 'root',
-  password: '',    // password-in tënd
-  database: 'devlog'  // emri i databazës që ke krijuar në phpMyAdmin
+  password: '',   
+  database: 'devlog' 
 };
 
 async function testConnection() {

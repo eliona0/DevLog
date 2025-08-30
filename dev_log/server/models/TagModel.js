@@ -1,7 +1,6 @@
 const db = require('../config/db');
 
 const TagModel = {
-  // Get all tags
   getAll: async () => {
     const [rows] = await db.execute(`
       SELECT id, name
@@ -11,7 +10,6 @@ const TagModel = {
     return rows;
   },
 
-  // Find a single tag by ID
   findById: async (id) => {
     const [rows] = await db.execute(`
       SELECT id, name
@@ -21,7 +19,6 @@ const TagModel = {
     return rows[0];
   },
 
-  // Create a new tag
   create: async (name) => {
     const [result] = await db.execute(`
       INSERT INTO tags (name)
@@ -30,7 +27,6 @@ const TagModel = {
     return result;
   },
 
-  // Update a tag
   update: async (id, name) => {
     const [result] = await db.execute(`
       UPDATE tags
@@ -40,7 +36,6 @@ const TagModel = {
     return result;
   },
 
-  // Delete a tag
   delete: async (id) => {
     const [result] = await db.execute(`
       DELETE FROM tags

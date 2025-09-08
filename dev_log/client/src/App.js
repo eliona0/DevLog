@@ -3,7 +3,7 @@ import HomePage from './pages/HomePage';
 import AuthPage from './components/AuthPage';
 import Navbar from './components/Navbar';
 import CreatePostForm from './components/CreatePostForm';
-
+import PostDetails from "./pages/PostDetails";
 
 function AppContent() {
   const location = useLocation();
@@ -16,7 +16,7 @@ function AppContent() {
         <Route path="/" element={<HomePage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/create-post" element={<CreatePostForm />} />
-
+        <Route path="/posts/:id" element={<PostDetails />} /> {/* Fix: Changed /post to /posts */}
       </Routes>
     </>
   );

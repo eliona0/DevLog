@@ -1,5 +1,6 @@
 const db = require('../config/db');
 
+// Create post
 exports.createPost = async (req, res) => {
   const { title, content, is_published, category_id } = req.body;
   const user_id = req.user.id;
@@ -7,7 +8,7 @@ exports.createPost = async (req, res) => {
   try {
     let featured_image = null;
     if (req.file) {
-      const [existingImage] = await pool.query(
+      const [existingImage] = await db.query(
         'SELECT featured_image FROM posts WHERE featured_image LIKE ?',
         [`%${req.file.originalname}%`]
       );
@@ -19,7 +20,7 @@ exports.createPost = async (req, res) => {
       featured_image = req.file.filename; 
     }
 
-    const [result] = await pool.query(
+    const [result] = await db.query(
       `INSERT INTO posts (user_id, title, content, featured_image, is_published, category_id)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [user_id, title, content, featured_image, is_published ? 1 : 0, category_id || null]
@@ -40,37 +41,79 @@ exports.createPost = async (req, res) => {
   }
 };
 
+// Get all posts
 exports.getAllPosts = async (req, res) => {
   try {
-    const [posts] = await db.query('SELECT * FROM posts ORDER BY created_at DESC');
-    res.json(posts);
+    const [posts] = await db.query(`
+      SELECT p.*, u.username, u.profile_photo,
+             c.name AS category,
+             GROUP_CONCAT(t.name) AS tags,
+             COALESCE(l.like_count, 0) AS likes,
+             COALESCE(com.comment_count, 0) AS comments
+      FROM posts p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN post_tags pt ON pt.post_id = p.id
+      LEFT JOIN tags t ON t.id = pt.tag_id
+      LEFT JOIN (SELECT post_id, COUNT(id) AS like_count FROM likes GROUP BY post_id) l ON l.post_id = p.id
+      LEFT JOIN (SELECT post_id, COUNT(id) AS comment_count FROM comments GROUP BY post_id) com ON com.post_id = p.id
+      WHERE p.is_published = 1
+      GROUP BY p.id
+    `);
+    const [tags] = await db.query(`
+      SELECT pt.post_id, GROUP_CONCAT(t.name) AS tags
+      FROM post_tags pt
+      JOIN tags t ON t.id = pt.tag_id
+      GROUP BY pt.post_id
+    `);
+    const postsWithTags = posts.map(p => ({
+      ...p,
+      tags: tags.find(t => t.post_id === p.id)?.tags || ''
+    }));
+    res.json(postsWithTags);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 };
-
+// Get post by ID (updated similarly for counts; optionally include full comments here if for PostDetails page)
 exports.getPostById = async (req, res) => {
   const postId = req.params.id;
 
   try {
-    const [posts] = await db.query('SELECT * FROM posts WHERE id = ?', [postId]);
+    const [posts] = await db.query(`
+      SELECT p.*, u.username, u.profile_photo,
+             c.name AS category,
+             GROUP_CONCAT(t.name) AS tags,
+             COALESCE(l.like_count, 0) AS likes,
+             COALESCE(com.comment_count, 0) AS comments
+      FROM posts p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN post_tags pt ON pt.post_id = p.id
+      LEFT JOIN tags t ON t.id = pt.tag_id
+      LEFT JOIN (SELECT post_id, COUNT(id) AS like_count FROM likes GROUP BY post_id) l ON l.post_id = p.id
+      LEFT JOIN (SELECT post_id, COUNT(id) AS comment_count FROM comments GROUP BY post_id) com ON com.post_id = p.id
+      WHERE p.id = ?
+      GROUP BY p.id
+    `, [postId]);
     if (posts.length === 0) return res.status(404).json({ error: 'Post not found' });
 
     const [tags] = await db.query(`
       SELECT t.id, t.name
       FROM tags t
       JOIN post_tags pt ON t.id = pt.tag_id
-      WHERE pt.post_id = ?`, [postId]
-    );
+      WHERE pt.post_id = ?
+    `, [postId]);
 
-    res.json({ ...posts[0], tags });
+    res.json({ ...posts[0], tags: tags.map(t => t.name).join(',') });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch post' });
   }
 };
 
+// Update post
 exports.updatePost = async (req, res) => {
   const postId = req.params.id;
   const { title, content, featured_image, is_published, category_id } = req.body;
@@ -95,6 +138,7 @@ exports.updatePost = async (req, res) => {
   }
 };
 
+// Delete post
 exports.deletePost = async (req, res) => {
   const postId = req.params.id;
   const user_id = req.user.id;
@@ -109,5 +153,20 @@ exports.deletePost = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete post' });
+  }
+};
+
+// ... existing imports and functions ...
+
+// In PostController.js
+exports.incrementView = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query('UPDATE posts SET views = views + 1 WHERE id = ?', [id]);
+    const [post] = await db.query('SELECT views FROM posts WHERE id = ?', [id]);
+    res.json({ views: post[0].views });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to increment view' });
   }
 };

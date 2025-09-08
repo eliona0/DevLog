@@ -6,7 +6,8 @@ const cors = require('cors');
 const path = require('path');
 
 
-dotenv.config();
+require('dotenv').config();
+
 
 const app = express();
 
@@ -28,6 +29,12 @@ app.use('/api/categories', categoryRoutes);
 
 const tagRoutes = require('./routes/tagRoutes');
 app.use('/api/tags', tagRoutes);
+
+const commentRoutes = require('./routes/commentRoutes');
+app.use('/api/comments', commentRoutes);
+
+const likeRoutes = require("./routes/likeRoutes");
+app.use("/api/likes", likeRoutes);
 
 
 

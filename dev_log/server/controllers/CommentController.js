@@ -3,17 +3,23 @@ const db = require('../config/db');
 
 // Create a new comment on a post
 exports.createComment = async (req, res) => {
-  const { postId } = req.params; // Changed from post_id to postId
+  const { postId } = req.params;
   const { comment } = req.body;
-  const user_id = req.user.id; // From auth middleware
 
   if (!comment || comment.trim().length === 0) {
     return res.status(400).json({ error: 'Comment cannot be empty' });
   }
 
+  // Check if user is authenticated
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ error: 'Authentication required to comment' });
+  }
+
+  const user_id = req.user.id;
+
   try {
     const [post] = await db.query('SELECT id FROM posts WHERE id = ? AND is_published = 1', [postId]);
-    console.log('Query result for postId', postId, ':', post); // Updated debug log
+    console.log('Query result for postId', postId, ':', post);
     if (!post.length) {
       return res.status(404).json({ error: 'Post not found' });
     }
@@ -28,11 +34,11 @@ exports.createComment = async (req, res) => {
 
 // Get all comments for a post
 exports.getCommentsByPostId = async (req, res) => {
-  const { postId } = req.params; // Changed from post_id to postId
+  const { postId } = req.params;
 
   try {
     const [post] = await db.query('SELECT id FROM posts WHERE id = ? AND is_published = 1', [postId]);
-    console.log('Query result for postId', postId, ':', post); // Updated debug log
+    console.log('Query result for postId', postId, ':', post);
     if (!post.length) {
       return res.status(404).json({ error: 'Post not found' });
     }

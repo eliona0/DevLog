@@ -53,39 +53,39 @@ function HomePage() {
     }
   };
 
-  const handleAddComment = async (postId, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const commentText = newComment[postId]?.trim();
-    if (!commentText) return;
+const handleAddComment = async (postId, e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const commentText = newComment[postId]?.trim();
+  if (!commentText) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError(prev => ({ ...prev, [postId]: 'You must be logged in to comment' }));
-      return;
-    }
+  const token = localStorage.getItem('token');
+  if (!token) {
+    setError(prev => ({ ...prev, [postId]: 'Please log in to comment' }));
+    return;
+  }
 
-    setLoading(prev => ({ ...prev, [postId]: true }));
-    setError(prev => ({ ...prev, [postId]: null }));
-    try {
-      await axios.post(
-        `http://localhost:5000/api/comments/${postId}`,
-        { comment: commentText },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const res = await axios.get(`http://localhost:5000/api/comments/${postId}`);
-      setComments(prev => ({ ...prev, [postId]: res.data }));
-      setPosts(prev => prev.map(post => 
-        post.id === postId ? { ...post, comments: (post.comments || 0) + 1 } : post
-      ));
-      setNewComment(prev => ({ ...prev, [postId]: '' }));
-    } catch (err) {
-      console.error('Failed to add comment for post', postId, ':', err);
-      setError(prev => ({ ...prev, [postId]: err.response?.data?.error || 'Failed to add comment' }));
-    } finally {
-      setLoading(prev => ({ ...prev, [postId]: false }));
-    }
-  };
+  setLoading(prev => ({ ...prev, [postId]: true }));
+  setError(prev => ({ ...prev, [postId]: null }));
+  try {
+    await axios.post(
+      `http://localhost:5000/api/comments/${postId}`,
+      { comment: commentText },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const res = await axios.get(`http://localhost:5000/api/comments/${postId}`);
+    setComments(prev => ({ ...prev, [postId]: res.data }));
+    setPosts(prev => prev.map(post => 
+      post.id === postId ? { ...post, comments: (post.comments || 0) + 1 } : post
+    ));
+    setNewComment(prev => ({ ...prev, [postId]: '' }));
+  } catch (err) {
+    console.error('Failed to add comment for post', postId, ':', err);
+    setError(prev => ({ ...prev, [postId]: err.response?.status === 401 ? 'Please log in to comment' : err.response?.data?.error || 'Failed to add comment' }));
+  } finally {
+    setLoading(prev => ({ ...prev, [postId]: false }));
+  }
+};
 
   const formatDate = (dateString) => {
     const now = new Date();

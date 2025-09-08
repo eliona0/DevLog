@@ -14,10 +14,30 @@ function Navbar() {
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+      navigate('/');
+    } catch (err) {
+      console.error('Logout failed:', err);
+      // Still clear local storage and redirect even if server call fails
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+      navigate('/');
+    }
   };
 
   const handleCreate = () => {

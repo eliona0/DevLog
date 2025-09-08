@@ -57,34 +57,34 @@ function PostDetails() {
     }
   };
 
-  const handleAddComment = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
+const handleAddComment = async (e) => {
+  e.preventDefault();
+  if (!newComment.trim()) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('You must be logged in to comment.');
-      return;
-    }
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Please log in to comment.');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      await axios.post(
-        `http://localhost:5000/api/comments/${id}`,
-        { comment: newComment.trim() },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const res = await axios.get(`http://localhost:5000/api/comments/${id}`);
-      setComments(res.data);
-      setPost(prev => ({ ...prev, comments: (prev.comments || 0) + 1 }));
-      setNewComment("");
-    } catch (err) {
-      console.error('Failed to add comment:', err);
-      alert('Failed to add comment. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    await axios.post(
+      `http://localhost:5000/api/comments/${id}`,
+      { comment: newComment.trim() },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const res = await axios.get(`http://localhost:5000/api/comments/${id}`);
+    setComments(res.data);
+    setPost(prev => ({ ...prev, comments: (prev.comments || 0) + 1 }));
+    setNewComment("");
+  } catch (err) {
+    console.error('Failed to add comment:', err);
+    alert(err.response?.status === 401 ? 'Please log in to comment' : 'Failed to add comment. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const formatDate = (dateString) => {
     const now = new Date();

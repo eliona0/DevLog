@@ -50,4 +50,15 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+const logout = async (req, res) => {
+  try {
+    // Since JWT is stateless, the server doesn't need to do much.
+    // Client will remove the token. In a more complex setup, you could blacklist the token.
+    res.status(200).json({ message: 'Logout successful' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Logout failed' });
+  }
+};
+
+module.exports = { register, login, logout };

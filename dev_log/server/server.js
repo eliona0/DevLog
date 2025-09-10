@@ -36,6 +36,8 @@ app.use('/api/comments', commentRoutes);
 const likeRoutes = require("./routes/likeRoutes");
 app.use("/api/likes", likeRoutes);
 
+const bookmarkRoutes = require('./routes/bookmarkRoutes');
+app.use('/api/bookmarks', bookmarkRoutes);
 
 
 app.get('/', (req, res) => {

@@ -26,17 +26,25 @@ function Navbar() {
           },
         });
       }
+      // Clear all relevant local storage items
       localStorage.removeItem('user');
       localStorage.removeItem('token');
+      localStorage.removeItem('likedPosts'); // Clear likes if used elsewhere
+      localStorage.removeItem('bookmarkedPosts'); // Clear bookmarks if used elsewhere
       setUser(null);
+      // Navigate and force reload
       navigate('/');
+      window.location.reload(); // Force a full page refresh
     } catch (err) {
       console.error('Logout failed:', err);
-      // Still clear local storage and redirect even if server call fails
+      // Clear local storage and reload even if server call fails
       localStorage.removeItem('user');
       localStorage.removeItem('token');
+      localStorage.removeItem('likedPosts');
+      localStorage.removeItem('bookmarkedPosts');
       setUser(null);
       navigate('/');
+      window.location.reload();
     }
   };
 
@@ -77,11 +85,14 @@ function Navbar() {
 
             <div className="dropdown">
               <img
-                src={user.profilePic || 'https://content.api.news/v3/images/bin/b06bef9a5f8153a24f4abb07cbc2c11e'}
-                alt="Profile"
-                className="profile-pic"
-                onClick={toggleDropdown}
-              />
+  src={user && user.profile_photo 
+    ? `http://localhost:5000/uploads/${user.profile_photo}` 
+    : "/default.jpg"}
+  alt="Profile"
+  className="profile-pic"
+  onClick={toggleDropdown}
+/>
+
 
               {dropdownOpen && (
                 <div className="dropdown-menu">

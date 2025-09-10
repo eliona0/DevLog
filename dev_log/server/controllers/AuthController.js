@@ -28,6 +28,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { username, password } = req.body;
+    const redirect = req.query.redirect || '/'; // Capture redirect from query params
 
     const user = await User.findByUsername(username);
     if (!user) return res.status(401).json({ error: 'Invalid username or password' });
@@ -43,7 +44,7 @@ const login = async (req, res) => {
 
     const { password: pw, ...userWithoutPassword } = user;
 
-    res.status(200).json({ message: 'Login successful', token, user: userWithoutPassword });
+    res.status(200).json({ message: 'Login successful', token, user: userWithoutPassword, redirect });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });

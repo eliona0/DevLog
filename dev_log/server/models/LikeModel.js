@@ -1,58 +1,48 @@
-const pool = require('../config/db'); // your mysql pool
+const db = require('../config/db');
 
-class Like {
-  static async getLikes(postId) {
-    const [rows] = await pool.query(
-      "SELECT COUNT(*) AS count FROM likes WHERE post_id = ?",
-      [postId]
-    );
-    return rows[0].count;
-  }
+const LikeModel = {
+  create: async (postId, userId) => {
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
 
-  static async userLiked(postId, userId) {
-    const [rows] = await pool.query(
-      "SELECT * FROM likes WHERE post_id = ? AND user_id = ?",
-      [postId, userId]
-    );
-    return rows.length > 0;
-  }
+      const [result] = await conn.execute(
+        `INSERT INTO likes (post_id, user_id, created_at) VALUES (?, ?, NOW())`,
+        [postId, userId]
+      );
 
-static async addLike(postId, userId) {
-  try {
-    await pool.query(
-      "INSERT INTO likes (post_id, user_id) VALUES (?, ?)",
-      [postId, userId]
-    );
-    return true;
-  } catch (err) {
-    console.error("Error adding like:", err);
-    throw err; // This will propagate to your controller
-  }
-}
+      const likeId = result.insertId;
 
+      const [newLike] = await conn.execute(
+        `SELECT * FROM likes WHERE id = ?`,
+        [likeId]
+      );
 
-static async removeLike(postId, userId) {
-  try {
-    await pool.query(
-      "DELETE FROM likes WHERE post_id = ? AND user_id = ?",
-      [postId, userId]
-    );
-    return false;
-  } catch (err) {
-    console.error("Error removing like:", err);
-    throw err;
-  }
-}
-
-
-  static async toggleLike(postId, userId) {
-    const liked = await this.userLiked(postId, userId);
-    if (liked) {
-      return this.removeLike(postId, userId);
-    } else {
-      return this.addLike(postId, userId);
+      await conn.commit();
+      return newLike[0];
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
     }
-  }
-}
+  },
 
-module.exports = Like;
+  delete: async (postId, userId) => {
+    const [result] = await db.execute(
+      `DELETE FROM likes WHERE post_id = ? AND user_id = ?`,
+      [postId, userId]
+    );
+    return result.affectedRows > 0;
+  },
+
+  getByPostAndUser: async (postId, userId) => {
+    const [rows] = await db.execute(
+      `SELECT * FROM likes WHERE post_id = ? AND user_id = ?`,
+      [postId, userId]
+    );
+    return rows[0];
+  }
+};
+
+module.exports = LikeModel;

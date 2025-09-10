@@ -205,3 +205,28 @@
   background: #ccc;
   cursor: not-allowed;
 }
+
+.error-message {
+  color: red;
+  font-size: 0.9em;
+  margin-top: 5px;
+  text-align: center;
+}
+
+.bookmark-btn {
+  cursor: pointer;
+  margin-left: 10px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.bookmarked {
+  color: #ffd700; /* Gold color for bookmarked state */
+}
+
+.error-message {
+  color: red;
+  font-size: 0.9em;
+  margin-top: 5px;
+  text-align: center;
+}

@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useLocation, useNavigate } from 'react-router-dom';
 import '../styles/createpostform.css';
 
 function CreatePostForm() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const postToEdit = location.state?.post;
+
   const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    featured_image: '',
-    category_id: '',
-    is_published: false,
-    tags: [] // store selected tag IDs
+    title: postToEdit?.title || '',
+    content: postToEdit?.content || '',
+    featured_image: null,
+    category_id: postToEdit?.category_id || '',
+    is_published: postToEdit?.is_published === 1 || false,
+    tags: postToEdit?.tags?.split(',')?.map(tag => tag.trim()) || []
   });
 
   const [categories, setCategories] = useState([]);
@@ -38,75 +43,92 @@ function CreatePostForm() {
     fetchTags();
   }, []);
 
-const handleChange = (e) => {
-  const { name, value, type, checked, multiple, options } = e.target;
+  const handleChange = (e) => {
+    const { name, value, type, checked, files } = e.target;
 
-  if (multiple) {
-    const selectedValues = Array.from(options)
-      .filter(option => option.selected)
-      .map(option => option.value);
-    setFormData(prev => ({
-      ...prev,
-      [name]: selectedValues
-    }));
-  } else {
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  }
-};
+    if (name === 'featured_image' && files) {
+      setFormData(prev => ({
+        ...prev,
+        featured_image: files[0]
+      }));
+    } else if (type === 'checkbox' && name === 'tags') {
+      const tagValue = value;
+      setFormData(prev => ({
+        ...prev,
+        tags: prev.tags.includes(tagValue)
+          ? prev.tags.filter(t => t !== tagValue)
+          : [...prev.tags, tagValue]
+      }));
+    } else if (type === 'checkbox') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
 
-
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
   e.preventDefault();
 
   const token = localStorage.getItem('token');
   if (!token) {
-    alert('You must be logged in to create a post.');
+    alert('You must be logged in to create or edit a post.');
     return;
   }
 
   try {
     const data = new FormData();
-    data.append('title', formData.title);
-    data.append('content', formData.content);
-    data.append('category_id', formData.category_id);
-    data.append('is_published', formData.is_published ? 1 : 0);
-    formData.tags.forEach(tag => data.append('tags[]', tag));
+
+    // Always append strings
+    data.append('title', formData.title || '');
+    data.append('content', formData.content || '');
+    data.append('is_published', formData.is_published ? '1' : '0');
+
+    // Append category only if selected
+    if (formData.category_id) data.append('category_id', formData.category_id);
+
+    // Append tags safely
+    formData.tags.forEach(tag => {
+      if (tag !== undefined && tag !== null) data.append('tags[]', tag);
+    });
+
+    // Append featured image if exists
     if (formData.featured_image) {
       data.append('featured_image', formData.featured_image);
     }
 
-    await axios.post(
-      'http://localhost:5000/api/posts',
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      }
-    );
+    const url = postToEdit
+      ? `http://localhost:5000/api/posts/${postToEdit.id}`
+      : 'http://localhost:5000/api/posts';
+    const method = postToEdit ? 'put' : 'post';
 
-    alert('Post created successfully!');
-    setFormData({
-      title: '',
-      content: '',
-      featured_image: '',
-      category_id: '',
-      is_published: false,
-      tags: []
+    await axios({
+      method,
+      url,
+      data,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
     });
+
+    alert(postToEdit ? 'Post updated successfully!' : 'Post created successfully!');
+    navigate('/');
   } catch (error) {
-    console.error('Failed to create post:', error);
+    console.error('Failed to save post:', error.response ? error.response.data : error.message);
+    alert('Failed to save post: ' + (error.response?.data?.error || error.message));
   }
 };
 
 
   return (
     <div className="create-post-container">
-      <h2>Create a New Post</h2>
+      <h2>{postToEdit ? 'Edit Post' : 'Create a New Post'}</h2>
       <form className="create-post-form" onSubmit={handleSubmit}>
         <label>Title</label>
         <input
@@ -130,14 +152,11 @@ const handleSubmit = async (e) => {
         <input
           type="file"
           name="featured_image"
-          onChange={(e) => {
-            setFormData(prev => ({
-              ...prev,
-              featured_image: e.target.files[0] // store the File object
-            }));
-          }}
+          onChange={handleChange}
         />
-
+        {postToEdit && !formData.featured_image && postToEdit.featured_image && (
+          <p>Current image: {postToEdit.featured_image}</p>
+        )}
 
         <label>Category</label>
         <select
@@ -152,30 +171,21 @@ const handleSubmit = async (e) => {
           ))}
         </select>
 
-<label>Tags</label>
-<div className="tags-checkboxes">
-  {tags.map(tag => (
-    <label key={tag.id}>
-      <input
-        type="checkbox"
-        name="tags"
-        value={tag.id}
-        checked={formData.tags.includes(tag.id.toString())}
-        onChange={(e) => {
-          const value = e.target.value;
-          setFormData(prev => ({
-            ...prev,
-            tags: prev.tags.includes(value)
-              ? prev.tags.filter(v => v !== value)
-              : [...prev.tags, value]
-          }));
-        }}
-      />
-      #{tag.name}
-    </label>
-  ))}
-</div>
-
+        <label>Tags</label>
+        <div className="tags-checkboxes">
+          {tags.map(tag => (
+            <label key={tag.id}>
+              <input
+                type="checkbox"
+                name="tags"
+                value={tag.id.toString()}
+                checked={formData.tags.includes(tag.id.toString())}
+                onChange={handleChange}
+              />
+              #{tag.name}
+            </label>
+          ))}
+        </div>
 
         <div className="checkbox-wrapper">
           <input
@@ -187,7 +197,7 @@ const handleSubmit = async (e) => {
           <span>Publish immediately</span>
         </div>
 
-        <button type="submit" className="submit-button">Post</button>
+        <button type="submit" className="submit-button">{postToEdit ? 'Update' : 'Post'}</button>
       </form>
     </div>
   );

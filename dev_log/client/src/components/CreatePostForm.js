@@ -1,3 +1,4 @@
+// CreatePostForm.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -73,58 +74,54 @@ function CreatePostForm() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const token = localStorage.getItem('token');
-  if (!token) {
-    alert('You must be logged in to create or edit a post.');
-    return;
-  }
-
-  try {
-    const data = new FormData();
-
-    // Always append strings
-    data.append('title', formData.title || '');
-    data.append('content', formData.content || '');
-    data.append('is_published', formData.is_published ? '1' : '0');
-
-    // Append category only if selected
-    if (formData.category_id) data.append('category_id', formData.category_id);
-
-    // Append tags safely
-    formData.tags.forEach(tag => {
-      if (tag !== undefined && tag !== null) data.append('tags[]', tag);
-    });
-
-    // Append featured image if exists
-    if (formData.featured_image) {
-      data.append('featured_image', formData.featured_image);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to create or edit a post.');
+      return;
     }
 
-    const url = postToEdit
-      ? `http://localhost:5000/api/posts/${postToEdit.id}`
-      : 'http://localhost:5000/api/posts';
-    const method = postToEdit ? 'put' : 'post';
+    try {
+      const data = new FormData();
+      data.append('title', formData.title || '');
+      data.append('content', formData.content || '');
+      data.append('is_published', formData.is_published ? '1' : '0');
+      if (formData.category_id) data.append('category_id', formData.category_id);
+      if (formData.tags && formData.tags.length > 0) {
+        formData.tags.forEach(tag => data.append('tags[]', tag));
+      }
+      if (formData.featured_image) {
+        data.append('featured_image', formData.featured_image);
+      }
 
-    await axios({
-      method,
-      url,
-      data,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+      // Log FormData contents for debugging
+      for (let [key, value] of data.entries()) {
+        console.log(`${key}: ${value instanceof File ? value.name : value}`);
+      }
 
-    alert(postToEdit ? 'Post updated successfully!' : 'Post created successfully!');
-    navigate('/');
-  } catch (error) {
-    console.error('Failed to save post:', error.response ? error.response.data : error.message);
-    alert('Failed to save post: ' + (error.response?.data?.error || error.message));
-  }
-};
+      const url = postToEdit
+        ? `http://localhost:5000/api/posts/${postToEdit.id}`
+        : 'http://localhost:5000/api/posts';
+      const method = postToEdit ? 'put' : 'post';
 
+      const response = await axios({
+        method,
+        url,
+        data,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Let browser set Content-Type for multipart/form-data
+        },
+      });
+
+      alert(postToEdit ? 'Post updated successfully!' : 'Post created successfully!');
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to save post:', error.response ? error.response.data : error.message);
+      alert('Failed to save post: ' + (error.response?.data?.error || error.message));
+    }
+  };
 
   return (
     <div className="create-post-container">
@@ -153,6 +150,7 @@ function CreatePostForm() {
           type="file"
           name="featured_image"
           onChange={handleChange}
+          accept="image/*"
         />
         {postToEdit && !formData.featured_image && postToEdit.featured_image && (
           <p>Current image: {postToEdit.featured_image}</p>

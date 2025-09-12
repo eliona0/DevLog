@@ -1,47 +1,4 @@
-// const db = require('../config/db');
-
-// Create post
-// exports.createPost = async (req, res) => {
-//   const { title, content, is_published, category_id } = req.body;
-//   const user_id = req.user.id;
-
-//   try {
-//     let featured_image = null;
-//     if (req.file) {
-//       const [existingImage] = await db.query(
-//         'SELECT featured_image FROM posts WHERE featured_image LIKE ?',
-//         [`%${req.file.originalname}%`]
-//       );
-
-//       if (existingImage.length > 0) {
-//         return res.status(400).json({ error: 'This photo was already uploaded before. Please choose another one.' });
-//       }
-
-//       featured_image = req.file.filename;
-//     }
-
-//     // Extract tags from the request body (parsed from FormData)
-//     const tags = req.body['tags[]'] ? req.body['tags[]'].map(tag => parseInt(tag)) : [];
-
-//     // Use PostModel to create post and handle tag association
-//     const postId = await PostModel.create(user_id, title, content, featured_image, category_id || null, is_published ? 1 : 0, tags);
-
-//     res.status(201).json({
-//       id: postId,
-//       user_id,
-//       title,
-//       content,
-//       featured_image,
-//       is_published: is_published ? 1 : 0,
-//       category_id: category_id || null,
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Something went wrong while creating the post.' });
-//   }
-// };
-
-
+// PostController.js
 const db = require('../config/db');
 const multer = require('multer');
 const path = require('path');
@@ -52,119 +9,145 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage });
 
-exports.createPost = [
-  upload.single('featured_image'),
-  async (req, res) => {
-    const { title, content, is_published, category_id } = req.body;
-    const user_id = req.user.id;
-
-    try {
-      let featured_image = null;
-      if (req.file) {
-        const [existingImage] = await db.query(
-          'SELECT featured_image FROM posts WHERE featured_image LIKE ?',
-          [`%${req.file.originalname}%`]
-        );
-        if (existingImage.length > 0) {
-          return res.status(400).json({ error: 'This photo was already uploaded before. Please choose another one.' });
-        }
-        featured_image = req.file.filename;
-      }
-
-      const tags = req.body['tags[]'] ? req.body['tags[]'].map(tag => parseInt(tag)) : [];
-
-      const conn = await db.getConnection();
-      try {
-        await conn.beginTransaction();
-
-        const [result] = await conn.query(
-          'INSERT INTO posts (user_id, title, content, featured_image, category_id, is_published, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-          [user_id, title, content, featured_image, category_id || null, is_published ? 1 : 0]
-        );
-        const postId = result.insertId;
-
-        if (tags.length > 0) {
-          const tagValues = tags.map(tag => [postId, tag]);
-          await conn.query('INSERT INTO post_tags (post_id, tag_id) VALUES ?', [tagValues]);
-        }
-
-        await conn.commit();
-        res.status(201).json({ id: postId, user_id, title, content, featured_image, is_published, category_id });
-      } catch (err) {
-        await conn.rollback();
-        throw err;
-      } finally {
-        conn.release();
-      }
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to create post' });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5MB
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images are allowed (jpeg, jpg, png, gif)'));
     }
   }
-];
+}).single('featured_image');
 
-exports.updatePost = [
-  upload.single('featured_image'),
-  async (req, res) => {
-    const { id } = req.params;
-    const { title, content, is_published, category_id } = req.body;
-    const user_id = req.user.id;
+exports.createPost = async (req, res) => {
+  const { title, content, is_published, category_id } = req.body;
+  const user_id = req.user.id;
 
-    try {
-      const [existing] = await db.query('SELECT * FROM posts WHERE id = ?', [id]);
-      if (!existing.length) return res.status(404).json({ error: 'Post not found' });
-      if (existing[0].user_id !== user_id) return res.status(403).json({ error: 'Not authorized' });
+  try {
+    // Log incoming request data for debugging
+    console.log('createPost - req.body:', req.body);
+    console.log('createPost - req.file:', req.file);
 
-      let featured_image = existing[0].featured_image;
-      if (req.file) {
-        const [existingImage] = await db.query(
-          'SELECT featured_image FROM posts WHERE featured_image LIKE ? AND id != ?',
-          [`%${req.file.originalname}%`, id]
-        );
-        if (existingImage.length > 0) {
-          return res.status(400).json({ error: 'This photo was already uploaded before. Please choose another one.' });
-        }
-        featured_image = req.file.filename;
+    let featured_image = null;
+    if (req.file) {
+      const [existingImage] = await db.query(
+        'SELECT featured_image FROM posts WHERE featured_image LIKE ?',
+        [`%${req.file.originalname}%`]
+      );
+      if (existingImage.length > 0) {
+        return res.status(400).json({ error: 'This photo was already uploaded before. Please choose another one.' });
       }
+      featured_image = req.file.filename;
+    }
 
-      const tags = req.body['tags[]'] ? req.body['tags[]'].map(tag => parseInt(tag)) : [];
+    const tags = req.body['tags[]']
+      ? Array.isArray(req.body['tags[]'])
+        ? req.body['tags[]'].map(tag => parseInt(tag))
+        : [parseInt(req.body['tags[]'])]
+      : [];
 
-      const conn = await db.getConnection();
-      try {
-        await conn.beginTransaction();
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
 
-        await conn.query(
-          'UPDATE posts SET title = ?, content = ?, featured_image = ?, category_id = ?, is_published = ?, updated_at = NOW() WHERE id = ?',
-          [title, content, featured_image, category_id || null, is_published ? 1 : 0, id]
-        );
+      const [result] = await conn.query(
+        'INSERT INTO posts (user_id, title, content, featured_image, category_id, is_published, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+        [user_id, title, content, featured_image, category_id || null, is_published ? 1 : 0]
+      );
+      const postId = result.insertId;
 
-        await conn.query('DELETE FROM post_tags WHERE post_id = ?', [id]);
-        if (tags.length > 0) {
-          const tagValues = tags.map(tag => [id, tag]);
+      if (tags.length > 0) {
+        const tagValues = tags.filter(tag => !isNaN(tag)).map(tag => [postId, tag]);
+        if (tagValues.length > 0) {
           await conn.query('INSERT INTO post_tags (post_id, tag_id) VALUES ?', [tagValues]);
         }
-
-        await conn.commit();
-        const [updatedPost] = await db.query('SELECT * FROM posts WHERE id = ?', [id]);
-        res.json(updatedPost[0]);
-      } catch (err) {
-        await conn.rollback();
-        throw err;
-      } finally {
-        conn.release();
       }
+
+      await conn.commit();
+      res.status(201).json({ id: postId, user_id, title, content, featured_image, is_published, category_id });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to update post' });
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
     }
+  } catch (err) {
+    console.error('Create post error:', err);
+    res.status(500).json({ error: err.message || 'Failed to create post' });
   }
-];
+};
 
-// Keep other exports (getAllPosts, getPostById, deletePost, incrementView) as they are
+exports.updatePost = async (req, res) => {
+  const { id } = req.params;
+  const { title, content, is_published, category_id } = req.body;
+  const user_id = req.user.id;
 
-// Get all posts
+  try {
+    // Log incoming request data for debugging
+    console.log('updatePost - req.body:', req.body);
+    console.log('updatePost - req.file:', req.file);
+
+    const [existing] = await db.query('SELECT * FROM posts WHERE id = ?', [id]);
+    if (!existing.length) return res.status(404).json({ error: 'Post not found' });
+    if (existing[0].user_id !== user_id) return res.status(403).json({ error: 'Not authorized' });
+
+    let featured_image = existing[0].featured_image;
+    if (req.file) {
+      const [existingImage] = await db.query(
+        'SELECT featured_image FROM posts WHERE featured_image LIKE ? AND id != ?',
+        [`%${req.file.originalname}%`, id]
+      );
+      if (existingImage.length > 0) {
+        return res.status(400).json({ error: 'This photo was already uploaded before. Please choose another one.' });
+      }
+      featured_image = req.file.filename;
+    }
+
+    const tags = req.body['tags[]']
+      ? Array.isArray(req.body['tags[]'])
+        ? req.body['tags[]'].map(tag => parseInt(tag))
+        : [parseInt(req.body['tags[]'])]
+      : [];
+
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.query(
+        'UPDATE posts SET title = ?, content = ?, featured_image = ?, category_id = ?, is_published = ?, updated_at = NOW() WHERE id = ?',
+        [title, content, featured_image, category_id || null, is_published ? 1 : 0, id]
+      );
+
+      await conn.query('DELETE FROM post_tags WHERE post_id = ?', [id]);
+      if (tags.length > 0) {
+        const tagValues = tags.filter(tag => !isNaN(tag)).map(tag => [id, tag]);
+        if (tagValues.length > 0) {
+          await conn.query('INSERT INTO post_tags (post_id, tag_id) VALUES ?', [tagValues]);
+        }
+      }
+
+      await conn.commit();
+      const [updatedPost] = await db.query('SELECT * FROM posts WHERE id = ?', [id]);
+      res.json(updatedPost[0]);
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    console.error('Update post error:', err);
+    res.status(500).json({ error: err.message || 'Failed to update post' });
+  }
+};
+
+// Keep other exports unchanged
 exports.getAllPosts = async (req, res) => {
   try {
     const [posts] = await db.query(`
@@ -199,7 +182,7 @@ exports.getAllPosts = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch posts' });
   }
 };
-// Get post by ID (updated similarly for counts; optionally include full comments here if for PostDetails page)
+
 exports.getPostById = async (req, res) => {
   const postId = req.params.id;
 
@@ -236,7 +219,6 @@ exports.getPostById = async (req, res) => {
   }
 };
 
-// Delete post
 exports.deletePost = async (req, res) => {
   const postId = req.params.id;
   const user_id = req.user.id;
@@ -254,9 +236,6 @@ exports.deletePost = async (req, res) => {
   }
 };
 
-// ... existing imports and functions ...
-
-// In PostController.js
 exports.incrementView = async (req, res) => {
   const { id } = req.params;
   try {
@@ -268,3 +247,6 @@ exports.incrementView = async (req, res) => {
     res.status(500).json({ error: 'Failed to increment view' });
   }
 };
+
+// Export the multer middleware for use in routes
+exports.upload = upload;

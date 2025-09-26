@@ -1,19 +1,31 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom"; // Removed useLocation
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/homepage.css";
-import { FaEye, FaHeart, FaRegHeart, FaComment, FaBookmark, FaRegBookmark, FaSearch, FaUser, FaSignOutAlt, FaPlus, FaHome } from "react-icons/fa";
+import {
+  FaEye,
+  FaHeart,
+  FaRegHeart,
+  FaComment,
+  FaBookmark,
+  FaRegBookmark,
+  FaSearch,
+  FaUser,
+  FaSignOutAlt,
+  FaPlus,
+  FaHome,
+} from "react-icons/fa";
 
 function HomePage() {
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [filteredPosts, setFilteredPosts] = useState([]);
   const [likedPosts, setLikedPosts] = useState(() => {
-    const savedLikes = localStorage.getItem('likedPosts');
+    const savedLikes = localStorage.getItem("likedPosts");
     return savedLikes ? JSON.parse(savedLikes) : [];
   });
   const [bookmarkedPosts, setBookmarkedPosts] = useState(() => {
-    const savedBookmarks = localStorage.getItem('bookmarkedPosts');
+    const savedBookmarks = localStorage.getItem("bookmarkedPosts");
     return savedBookmarks ? JSON.parse(savedBookmarks) : [];
   });
   const [showComments, setShowComments] = useState({});
@@ -21,52 +33,68 @@ function HomePage() {
   const [newComment, setNewComment] = useState({});
   const [loading, setLoading] = useState({});
   const [error, setError] = useState({});
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [popularPosts, setPopularPosts] = useState([]);
   const [recentPosts, setRecentPosts] = useState([]);
   const [trendingTags, setTrendingTags] = useState([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    !!localStorage.getItem("token")
+  );
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
     // Fetch posts
-    axios.get("http://localhost:5000/api/posts")
-      .then(res => {
+    axios
+      .get("http://localhost:5000/api/posts")
+      .then((res) => {
         console.log("Fetched posts:", res.data);
-        setPosts(res.data);
-        setFilteredPosts(res.data);
+
+        // Sort by date (newest first)
+        const sortedByDate = [...res.data].sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+        setPosts(sortedByDate);
+        setFilteredPosts(sortedByDate);
+
         // Popular posts (top 5 by likes)
-        const sortedByLikes = [...res.data].sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 5);
+        const sortedByLikes = [...res.data]
+          .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+          .slice(0, 5);
         setPopularPosts(sortedByLikes);
-        // Recent posts (latest 3 by creation date)
-        const sortedByDate = [...res.data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3);
-        setRecentPosts(sortedByDate);
+
+        // Recent posts (latest 3)
+        const recent = sortedByDate.slice(0, 3);
+        setRecentPosts(recent);
+
         // Trending tags (top 5 by frequency)
         const tagMap = {};
-        res.data.forEach(post => {
+        res.data.forEach((post) => {
           if (post.tags) {
-            post.tags.split(",").forEach(tag => {
+            post.tags.split(",").forEach((tag) => {
               const trimmed = tag.trim();
               tagMap[trimmed] = (tagMap[trimmed] || 0) + 1;
             });
           }
         });
-        const sortedTags = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        const sortedTags = Object.entries(tagMap)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
         setTrendingTags(sortedTags);
       })
-      .catch(err => {
-        console.error('Failed to fetch posts:', err);
-        setError({ global: 'Failed to load posts. Please try again.' });
+      .catch((err) => {
+        console.error("Failed to fetch posts:", err);
+        setError({ global: "Failed to load posts. Please try again." });
       });
 
     // Fetch user data if logged in
     if (isLoggedIn) {
-      const token = localStorage.getItem('token');
-      axios.get("http://localhost:5000/api/user", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(res => setUserData(res.data))
-        .catch(err => console.error('Failed to fetch user data:', err));
+      const token = localStorage.getItem("token");
+      axios
+        .get("http://localhost:5000/api/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => setUserData(res.data))
+        .catch((err) => console.error("Failed to fetch user data:", err));
     }
   }, [isLoggedIn]);
 
@@ -74,10 +102,11 @@ function HomePage() {
   useEffect(() => {
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
-      const filtered = posts.filter(post => 
-        post.title.toLowerCase().includes(lowerQuery) ||
-        (post.content && post.content.toLowerCase().includes(lowerQuery)) ||
-        (post.tags && post.tags.toLowerCase().includes(lowerQuery))
+      const filtered = posts.filter(
+        (post) =>
+          post.title.toLowerCase().includes(lowerQuery) ||
+          (post.content && post.content.toLowerCase().includes(lowerQuery)) ||
+          (post.tags && post.tags.toLowerCase().includes(lowerQuery))
       );
       setFilteredPosts(filtered);
     } else {
@@ -86,64 +115,94 @@ function HomePage() {
   }, [searchQuery, posts]);
 
   const toggleLike = async (postId) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      setError(prev => ({ ...prev, [postId]: 'Please sign in to like this post' }));
+      setError((prev) => ({
+        ...prev,
+        [postId]: "Please sign in to like this post",
+      }));
       return;
     }
 
-    setLoading(prev => ({ ...prev, [postId]: true }));
-    setError(prev => ({ ...prev, [postId]: null }));
+    setLoading((prev) => ({ ...prev, [postId]: true }));
+    setError((prev) => ({ ...prev, [postId]: null }));
     try {
       const res = await axios.post(
         `http://localhost:5000/api/likes/${postId}/toggle`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const newLikedPosts = res.data.liked 
-        ? [...likedPosts, postId] 
-        : likedPosts.filter(id => id !== postId);
+      const newLikedPosts = res.data.liked
+        ? [...likedPosts, postId]
+        : likedPosts.filter((id) => id !== postId);
       setLikedPosts(newLikedPosts);
-      localStorage.setItem('likedPosts', JSON.stringify(newLikedPosts));
-      setPosts(prev => prev.map(post => 
-        post.id === postId ? { ...post, likes: res.data.liked ? (post.likes || 0) + 1 : (post.likes || 0) - 1 } : post
-      ));
-      setFilteredPosts(prev => prev.map(post => 
-        post.id === postId ? { ...post, likes: res.data.liked ? (post.likes || 0) + 1 : (post.likes || 0) - 1 } : post
-      ));
+      localStorage.setItem("likedPosts", JSON.stringify(newLikedPosts));
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                likes: res.data.liked
+                  ? (post.likes || 0) + 1
+                  : (post.likes || 0) - 1,
+              }
+            : post
+        )
+      );
+      setFilteredPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                likes: res.data.liked
+                  ? (post.likes || 0) + 1
+                  : (post.likes || 0) - 1,
+              }
+            : post
+        )
+      );
     } catch (err) {
-      console.error('Failed to toggle like:', err);
-      setError(prev => ({ ...prev, [postId]: 'Failed to toggle like' }));
+      console.error("Failed to toggle like:", err);
+      setError((prev) => ({ ...prev, [postId]: "Failed to toggle like" }));
     } finally {
-      setLoading(prev => ({ ...prev, [postId]: false }));
+      setLoading((prev) => ({ ...prev, [postId]: false }));
     }
   };
 
   const toggleBookmark = async (postId) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      setError(prev => ({ ...prev, [postId]: 'Please sign in to bookmark this post' }));
+      setError((prev) => ({
+        ...prev,
+        [postId]: "Please sign in to bookmark this post",
+      }));
       return;
     }
 
-    setLoading(prev => ({ ...prev, [postId]: true }));
-    setError(prev => ({ ...prev, [postId]: null }));
+    setLoading((prev) => ({ ...prev, [postId]: true }));
+    setError((prev) => ({ ...prev, [postId]: null }));
     try {
       const res = await axios.post(
         `http://localhost:5000/api/bookmarks/${postId}/toggle`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const newBookmarkedPosts = res.data.bookmarked 
-        ? [...bookmarkedPosts, postId] 
-        : bookmarkedPosts.filter(id => id !== postId);
+      const newBookmarkedPosts = res.data.bookmarked
+        ? [...bookmarkedPosts, postId]
+        : bookmarkedPosts.filter((id) => id !== postId);
       setBookmarkedPosts(newBookmarkedPosts);
-      localStorage.setItem('bookmarkedPosts', JSON.stringify(newBookmarkedPosts));
+      localStorage.setItem(
+        "bookmarkedPosts",
+        JSON.stringify(newBookmarkedPosts)
+      );
     } catch (err) {
-      console.error('Failed to toggle bookmark:', err);
-      setError(prev => ({ ...prev, [postId]: 'Failed to toggle bookmark' }));
+      console.error("Failed to toggle bookmark:", err);
+      setError((prev) => ({
+        ...prev,
+        [postId]: "Failed to toggle bookmark",
+      }));
     } finally {
-      setLoading(prev => ({ ...prev, [postId]: false }));
+      setLoading((prev) => ({ ...prev, [postId]: false }));
     }
   };
 
@@ -151,19 +210,25 @@ function HomePage() {
     e.stopPropagation();
     const isCurrentlyShown = showComments[postId];
     const newShowState = !isCurrentlyShown;
-    setShowComments(prev => ({ ...prev, [postId]: newShowState }));
+    setShowComments((prev) => ({ ...prev, [postId]: newShowState }));
 
     if (newShowState && !comments[postId]) {
-      setLoading(prev => ({ ...prev, [postId]: true }));
-      setError(prev => ({ ...prev, [postId]: null }));
+      setLoading((prev) => ({ ...prev, [postId]: true }));
+      setError((prev) => ({ ...prev, [postId]: null }));
       try {
-        const res = await axios.get(`http://localhost:5000/api/comments/${postId}`);
-        setComments(prev => ({ ...prev, [postId]: res.data }));
+        const res = await axios.get(
+          `http://localhost:5000/api/comments/${postId}`
+        );
+        setComments((prev) => ({ ...prev, [postId]: res.data }));
       } catch (err) {
-        console.error('Failed to fetch comments for post', postId, ':', err);
-        setError(prev => ({ ...prev, [postId]: err.response?.data?.error || 'Failed to load comments' }));
+        console.error("Failed to fetch comments for post", postId, ":", err);
+        setError((prev) => ({
+          ...prev,
+          [postId]:
+            err.response?.data?.error || "Failed to load comments",
+        }));
       } finally {
-        setLoading(prev => ({ ...prev, [postId]: false }));
+        setLoading((prev) => ({ ...prev, [postId]: false }));
       }
     }
   };
@@ -174,34 +239,53 @@ function HomePage() {
     const commentText = newComment[postId]?.trim();
     if (!commentText) return;
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      setError(prev => ({ ...prev, [postId]: 'Please sign in to comment on this post' }));
+      setError((prev) => ({
+        ...prev,
+        [postId]: "Please sign in to comment on this post",
+      }));
       return;
     }
 
-    setLoading(prev => ({ ...prev, [postId]: true }));
-    setError(prev => ({ ...prev, [postId]: null }));
+    setLoading((prev) => ({ ...prev, [postId]: true }));
+    setError((prev) => ({ ...prev, [postId]: null }));
     try {
       await axios.post(
         `http://localhost:5000/api/comments/${postId}`,
         { comment: commentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const res = await axios.get(`http://localhost:5000/api/comments/${postId}`);
-      setComments(prev => ({ ...prev, [postId]: res.data }));
-      setPosts(prev => prev.map(post => 
-        post.id === postId ? { ...post, comments: (post.comments || 0) + 1 } : post
-      ));
-      setFilteredPosts(prev => prev.map(post => 
-        post.id === postId ? { ...post, comments: (post.comments || 0) + 1 } : post
-      ));
-      setNewComment(prev => ({ ...prev, [postId]: '' }));
+      const res = await axios.get(
+        `http://localhost:5000/api/comments/${postId}`
+      );
+      setComments((prev) => ({ ...prev, [postId]: res.data }));
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? { ...post, comments: (post.comments || 0) + 1 }
+            : post
+        )
+      );
+      setFilteredPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? { ...post, comments: (post.comments || 0) + 1 }
+            : post
+        )
+      );
+      setNewComment((prev) => ({ ...prev, [postId]: "" }));
     } catch (err) {
-      console.error('Failed to add comment for post', postId, ':', err);
-      setError(prev => ({ ...prev, [postId]: err.response?.status === 401 ? 'Please sign in to comment' : err.response?.data?.error || 'Failed to add comment' }));
+      console.error("Failed to add comment for post", postId, ":", err);
+      setError((prev) => ({
+        ...prev,
+        [postId]:
+          err.response?.status === 401
+            ? "Please sign in to comment"
+            : err.response?.data?.error || "Failed to add comment",
+      }));
     } finally {
-      setLoading(prev => ({ ...prev, [postId]: false }));
+      setLoading((prev) => ({ ...prev, [postId]: false }));
     }
   };
 
@@ -235,49 +319,53 @@ function HomePage() {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (token) {
         await axios.post(
-          '/api/auth/logout',
+          "/api/auth/logout",
           {},
           {
             headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
             },
           }
         );
       }
       // Clear all relevant local storage items
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('likedPosts');
-      localStorage.removeItem('bookmarkedPosts');
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("likedPosts");
+      localStorage.removeItem("bookmarkedPosts");
       setIsLoggedIn(false);
       setUserData(null);
       setLikedPosts([]);
       setBookmarkedPosts([]);
       // Navigate and force reload
-      navigate('/');
+      navigate("/");
       window.location.reload();
     } catch (err) {
-      console.error('Logout failed:', err);
-      // Clear local storage and reload even if server call fails
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('likedPosts');
-      localStorage.removeItem('bookmarkedPosts');
+      console.error("Logout failed:", err);
+      // Fallback: clear local storage anyway
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("likedPosts");
+      localStorage.removeItem("bookmarkedPosts");
       setIsLoggedIn(false);
       setUserData(null);
       setLikedPosts([]);
       setBookmarkedPosts([]);
-      navigate('/');
+      navigate("/");
       window.location.reload();
     }
   };
 
   if (error.global) {
-    return <div className="container"><p className="error">{error.global}</p></div>;
+    return (
+      <div className="container">
+        <p className="error">{error.global}</p>
+      </div>
+    );
   }
 
   return (

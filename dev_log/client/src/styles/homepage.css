@@ -27,7 +27,10 @@
 .left-layer,
 .right-layer {
   flex: 1;
+  height: 900px;
+  align-self: flex-start; /* Makes sure they align at the top */
 }
+
 
 .middle-layer {
   flex: 2;

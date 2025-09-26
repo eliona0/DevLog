@@ -21,3 +21,16 @@ exports.toggleLike = async (req, res) => {
     res.status(500).json({ error: 'Failed to toggle like', details: err.message });
   }
 };
+
+exports.checkLike = async (req, res) => {
+  const { postId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const existingLike = await LikeModel.getByPostAndUser(postId, userId);
+    res.json({ liked: !!existingLike });
+  } catch (err) {
+    console.error('Error checking like:', err.stack);
+    res.status(500).json({ error: 'Failed to check like', details: err.message });
+  }
+};

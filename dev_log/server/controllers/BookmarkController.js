@@ -21,3 +21,16 @@ exports.toggleBookmark = async (req, res) => {
     res.status(500).json({ error: 'Failed to toggle bookmark', details: err.message });
   }
 };
+
+exports.checkBookmark = async (req, res) => {
+  const { postId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const existingBookmark = await BookmarkModel.getByPostAndUser(postId, userId);
+    res.json({ bookmarked: !!existingBookmark });
+  } catch (err) {
+    console.error('Error checking bookmark:', err.stack);
+    res.status(500).json({ error: 'Failed to check bookmark', details: err.message });
+  }
+};

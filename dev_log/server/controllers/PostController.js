@@ -202,6 +202,7 @@ exports.getPostById = async (req, res) => {
       LEFT JOIN (SELECT post_id, COUNT(id) AS comment_count FROM comments GROUP BY post_id) com ON com.post_id = p.id
       WHERE p.id = ?
       GROUP BY p.id
+      ORDER BY p.created_at DESC
     `, [postId]);
     if (posts.length === 0) return res.status(404).json({ error: 'Post not found' });
 

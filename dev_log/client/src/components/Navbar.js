@@ -62,6 +62,11 @@ function Navbar() {
     setDropdownOpen(false);
   };
 
+  const handleBookmark = () => {
+    navigate('/bookmarks'); 
+    setDropdownOpen(false);
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-left">
@@ -98,6 +103,7 @@ function Navbar() {
                 <div className="dropdown-menu">
                   <div className="dropdown-username">@{user.username}</div>
                   <button onClick={handleCreate}>Create Post</button>
+                  <button onClick={handleBookmark}>Bookmarks</button>
                   <button onClick={handleSettings}>Settings</button>
                   <button className="signout-btn" onClick={handleLogout}>
                     Sign Out

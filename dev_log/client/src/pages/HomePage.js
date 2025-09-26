@@ -1,13 +1,13 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Link, useLocation, useNavigate } from "react-router-dom"; 
+import { Link, useNavigate } from "react-router-dom"; // Removed useLocation
 import "../styles/homepage.css";
-import { FaEye, FaHeart, FaRegHeart, FaComment, FaBookmark, FaRegBookmark, FaEllipsisV } from "react-icons/fa";
+import { FaEye, FaHeart, FaRegHeart, FaComment, FaBookmark, FaRegBookmark, FaSearch, FaUser, FaSignOutAlt, FaPlus, FaHome } from "react-icons/fa";
 
 function HomePage() {
-  const location = useLocation();
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
+  const [filteredPosts, setFilteredPosts] = useState([]);
   const [likedPosts, setLikedPosts] = useState(() => {
     const savedLikes = localStorage.getItem('likedPosts');
     return savedLikes ? JSON.parse(savedLikes) : [];
@@ -21,37 +21,69 @@ function HomePage() {
   const [newComment, setNewComment] = useState({});
   const [loading, setLoading] = useState({});
   const [error, setError] = useState({});
-  const [showOptions, setShowOptions] = useState({});
-  const [showDeletePopup, setShowDeletePopup] = useState(null);
-  const userId = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).id : null;
-  const optionsRef = useRef({});
-  const popupRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [popularPosts, setPopularPosts] = useState([]);
+  const [recentPosts, setRecentPosts] = useState([]);
+  const [trendingTags, setTrendingTags] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const [userData, setUserData] = useState(null);
 
   useEffect(() => {
+    // Fetch posts
     axios.get("http://localhost:5000/api/posts")
       .then(res => {
         console.log("Fetched posts:", res.data);
         setPosts(res.data);
+        setFilteredPosts(res.data);
+        // Popular posts (top 5 by likes)
+        const sortedByLikes = [...res.data].sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 5);
+        setPopularPosts(sortedByLikes);
+        // Recent posts (latest 3 by creation date)
+        const sortedByDate = [...res.data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3);
+        setRecentPosts(sortedByDate);
+        // Trending tags (top 5 by frequency)
+        const tagMap = {};
+        res.data.forEach(post => {
+          if (post.tags) {
+            post.tags.split(",").forEach(tag => {
+              const trimmed = tag.trim();
+              tagMap[trimmed] = (tagMap[trimmed] || 0) + 1;
+            });
+          }
+        });
+        const sortedTags = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        setTrendingTags(sortedTags);
       })
       .catch(err => {
         console.error('Failed to fetch posts:', err);
         setError({ global: 'Failed to load posts. Please try again.' });
       });
 
-    const handleClickOutside = (e) => {
-      Object.keys(showOptions).forEach(postId => {
-        if (showOptions[postId] && optionsRef.current[postId] && !optionsRef.current[postId].contains(e.target)) {
-          setShowOptions(prev => ({ ...prev, [postId]: false }));
-        }
-      });
-      if (showDeletePopup && popupRef.current && !popupRef.current.contains(e.target)) {
-        setShowDeletePopup(null);
-      }
-    };
+    // Fetch user data if logged in
+    if (isLoggedIn) {
+      const token = localStorage.getItem('token');
+      axios.get("http://localhost:5000/api/user", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => setUserData(res.data))
+        .catch(err => console.error('Failed to fetch user data:', err));
+    }
+  }, [isLoggedIn]);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showOptions, showDeletePopup]);
+  // Handle search and tag filtering
+  useEffect(() => {
+    if (searchQuery) {
+      const lowerQuery = searchQuery.toLowerCase();
+      const filtered = posts.filter(post => 
+        post.title.toLowerCase().includes(lowerQuery) ||
+        (post.content && post.content.toLowerCase().includes(lowerQuery)) ||
+        (post.tags && post.tags.toLowerCase().includes(lowerQuery))
+      );
+      setFilteredPosts(filtered);
+    } else {
+      setFilteredPosts(posts);
+    }
+  }, [searchQuery, posts]);
 
   const toggleLike = async (postId) => {
     const token = localStorage.getItem('token');
@@ -74,6 +106,9 @@ function HomePage() {
       setLikedPosts(newLikedPosts);
       localStorage.setItem('likedPosts', JSON.stringify(newLikedPosts));
       setPosts(prev => prev.map(post => 
+        post.id === postId ? { ...post, likes: res.data.liked ? (post.likes || 0) + 1 : (post.likes || 0) - 1 } : post
+      ));
+      setFilteredPosts(prev => prev.map(post => 
         post.id === postId ? { ...post, likes: res.data.liked ? (post.likes || 0) + 1 : (post.likes || 0) - 1 } : post
       ));
     } catch (err) {
@@ -158,6 +193,9 @@ function HomePage() {
       setPosts(prev => prev.map(post => 
         post.id === postId ? { ...post, comments: (post.comments || 0) + 1 } : post
       ));
+      setFilteredPosts(prev => prev.map(post => 
+        post.id === postId ? { ...post, comments: (post.comments || 0) + 1 } : post
+      ));
       setNewComment(prev => ({ ...prev, [postId]: '' }));
     } catch (err) {
       console.error('Failed to add comment for post', postId, ':', err);
@@ -191,43 +229,51 @@ function HomePage() {
     }
   };
 
-  const handleOptionsToggle = (postId, e) => {
-    e.stopPropagation();
-    setShowOptions(prev => {
-      const newState = { [postId]: !prev[postId] };
-      Object.keys(prev).forEach(id => id !== postId && (newState[id] = false));
-      return newState;
-    });
+  const handleTagClick = (tag) => {
+    setSearchQuery(tag);
   };
 
-  const handleDelete = async (postId) => {
-    setShowDeletePopup(postId);
-  };
-
-  const confirmDelete = async (postId) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError(prev => ({ ...prev, [postId]: 'Please sign in to delete this post' }));
-      setShowDeletePopup(null);
-      return;
-    }
-
+  const handleLogout = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/posts/${postId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setPosts(prev => prev.filter(post => post.id !== postId));
-      setShowDeletePopup(null);
+      const token = localStorage.getItem('token');
+      if (token) {
+        await axios.post(
+          '/api/auth/logout',
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      }
+      // Clear all relevant local storage items
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('likedPosts');
+      localStorage.removeItem('bookmarkedPosts');
+      setIsLoggedIn(false);
+      setUserData(null);
+      setLikedPosts([]);
+      setBookmarkedPosts([]);
+      // Navigate and force reload
       navigate('/');
+      window.location.reload();
     } catch (err) {
-      console.error('Failed to delete post:', err);
-      setError(prev => ({ ...prev, [postId]: 'Failed to delete post' }));
-      setShowDeletePopup(null);
+      console.error('Logout failed:', err);
+      // Clear local storage and reload even if server call fails
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('likedPosts');
+      localStorage.removeItem('bookmarkedPosts');
+      setIsLoggedIn(false);
+      setUserData(null);
+      setLikedPosts([]);
+      setBookmarkedPosts([]);
+      navigate('/');
+      window.location.reload();
     }
-  };
-
-  const cancelDelete = (postId) => {
-    setShowDeletePopup(null);
   };
 
   if (error.global) {
@@ -238,17 +284,39 @@ function HomePage() {
     <div className="container">
       <div className="homepage">
         <div className="layer left-layer">
-          <h1>Left</h1>
+          <h2>Explore DevLog</h2>
+          <div className="search-bar">
+            <FaSearch />
+            <input 
+              type="text" 
+              placeholder="Search posts or tags..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+            />
+          </div>
+          <ul className="nav-menu">
+            <li><Link to="/"><FaHome /> Home</Link></li>
+            {isLoggedIn && (
+              <>
+                <li><Link to="/create-post"><FaPlus /> Create Post</Link></li>
+                <li><Link to="/bookmarks"><FaBookmark /> Bookmarks</Link></li>
+                <li><Link to="/profile"><FaUser /> Profile</Link></li>
+                <li><button className="signout-btn" onClick={handleLogout}><FaSignOutAlt /> Sign Out</button></li>
+              </>
+            )}
+            {/* {!isLoggedIn && (
+              <li><Link to="/login">Login / Sign Up</Link></li>
+            )} */}
+          </ul>
         </div>
 
         <div className="layer middle-layer">
-          {posts.length === 0 && !loading.global ? (
-            <p>No posts available. Create one to get started!</p>
+          {filteredPosts.length === 0 && !loading.global ? (
+            <p>No posts found. Try a different search or create one!</p>
           ) : (
-            posts.map(post => {
+            filteredPosts.map(post => {
               const postComments = comments[post.id] || [];
               const lastComment = postComments.length > 0 ? postComments[0] : null;
-              const isOwner = userId && post.user_id === userId;
 
               return (
                 <div key={post.id} className="post-card">
@@ -268,7 +336,9 @@ function HomePage() {
                     {post.content && <p>{post.content.substring(0, 150)}...</p>}
                     <p className="tags">
                       {post.tags?.split(",").map(tag => (
-                        <span key={tag} className="tag">#{tag.trim()}</span>
+                        <span key={tag} className="tag" onClick={() => handleTagClick(tag.trim())}>
+                          #{tag.trim()}
+                        </span>
                       ))}
                     </p>
                   </Link>
@@ -293,21 +363,6 @@ function HomePage() {
                     >
                       <FaComment /> {post.comments || 0}
                     </span>
-                    {isOwner && (
-                      <span 
-                        ref={el => optionsRef.current[post.id] = el}
-                        className="options-btn" 
-                        onClick={(e) => handleOptionsToggle(post.id, e)}
-                      >
-                        <FaEllipsisV />
-                        {showOptions[post.id] && (
-                          <div className="options-dropdown">
-                            <button onClick={() => navigate(`/create-post`, { state: { post } })}>Edit</button>
-                            <button onClick={() => handleDelete(post.id)}>Delete</button>
-                          </div>
-                        )}
-                      </span>
-                    )}
                   </div>
 
                   {error[post.id] && (
@@ -317,7 +372,7 @@ function HomePage() {
                   {!showComments[post.id] && lastComment && (
                     <div className="last-comment-preview" onClick={(e) => e.stopPropagation()}>
                       <img
-                         src={lastComment.profile_photo ? `http://localhost:5000/uploads/${lastComment.profile_photo}` : "/default.jpg"}
+                        src={lastComment.profile_photo ? `http://localhost:5000/uploads/${lastComment.profile_photo}` : "/default.jpg"}
                         alt="profile"
                         className="profile-pic small"
                       />
@@ -381,20 +436,42 @@ function HomePage() {
         </div>
 
         <div className="layer right-layer">
-          <h1>Right</h1>
-        </div>
-
-        {showDeletePopup && (
-          <div className="delete-popup" ref={popupRef}>
-            <div className="popup-content">
-              <h3>Are you sure you want to delete this post?</h3>
-              <div className="popup-buttons">
-                <button onClick={() => confirmDelete(showDeletePopup)}>Yes, I'm sure</button>
-                <button onClick={() => cancelDelete(showDeletePopup)}>Cancel</button>
-              </div>
-            </div>
+          <h2>Popular Posts</h2>
+          <ul className="popular-list">
+            {popularPosts.map(post => (
+              <li key={post.id}>
+                <Link to={`/posts/${post.id}`}>
+                  <h3>{post.title.length > 50 ? post.title.substring(0, 50) + '...' : post.title}</h3>
+                  <span><FaHeart /> {post.likes || 0}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <h2>Recent Posts</h2>
+          <ul className="popular-list">
+            {recentPosts.map(post => (
+              <li key={post.id}>
+                <Link to={`/posts/${post.id}`}>
+                  <h3>{post.title.length > 50 ? post.title.substring(0, 50) + '...' : post.title}</h3>
+                  <span><FaEye /> {post.views || 0}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <h2>Trending Tags</h2>
+          <div className="tags-cloud">
+            {trendingTags.map(([tag, count]) => (
+              <span 
+                key={tag} 
+                className="tag" 
+                style={{ fontSize: `${1 + count * 0.2}rem` }} 
+                onClick={() => handleTagClick(tag)}
+              >
+                #{tag} ({count})
+              </span>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

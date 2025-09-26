@@ -1,27 +1,33 @@
-import React, { useEffect, useState } from "react";
+// PostDetails.js
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import { useParams } from "react-router-dom";
-import "../styles/postdetails.css"; // Create this for styling
-import { FaEye, FaHeart, FaRegHeart, FaComment, FaBookmark, FaRegBookmark } from "react-icons/fa";
+import { useParams, useNavigate } from "react-router-dom";
+import "../styles/postdetails.css";
+import { FaEye, FaHeart, FaRegHeart, FaComment, FaBookmark, FaRegBookmark, FaEllipsisV } from "react-icons/fa";
 
 function PostDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [post, setPost] = useState(null);
   const [isLiked, setIsLiked] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false); // New state for bookmark
+  const [isBookmarked, setIsBookmarked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showOptions, setShowOptions] = useState(false);
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const userId = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).id : null;
+  const optionsRef = useRef(null);
+  const popupRef = useRef(null);
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/posts/${id}`);
-        console.log("Fetched post:", res.data); // Debug
+        console.log("Fetched post:", res.data);
         setPost(res.data);
-        // Check if the post is liked and bookmarked by the user
         const token = localStorage.getItem('token');
         if (token) {
           const likeResponse = await axios.get(
@@ -38,6 +44,7 @@ function PostDetails() {
         }
       } catch (err) {
         console.error('Failed to fetch post:', err);
+        setError(err.response?.data?.error || 'Failed to load post');
       }
     };
 
@@ -51,7 +58,19 @@ function PostDetails() {
 
     fetchPost();
     incrementView();
-  }, [id]);
+
+    const handleClickOutside = (e) => {
+      if (showOptions && optionsRef.current && !optionsRef.current.contains(e.target)) {
+        setShowOptions(false);
+      }
+      if (showDeletePopup && popupRef.current && !popupRef.current.contains(e.target)) {
+        setShowDeletePopup(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [id, showOptions, showDeletePopup]);
 
   const toggleLike = async () => {
     const token = localStorage.getItem('token');
@@ -74,6 +93,7 @@ function PostDetails() {
       }));
     } catch (err) {
       console.error('Failed to toggle like:', err);
+      setError('Failed to toggle like');
     } finally {
       setLoading(false);
     }
@@ -96,6 +116,7 @@ function PostDetails() {
       setIsBookmarked(res.data.bookmarked);
     } catch (err) {
       console.error('Failed to toggle bookmark:', err);
+      setError('Failed to toggle bookmark');
     } finally {
       setLoading(false);
     }
@@ -110,7 +131,7 @@ function PostDetails() {
         setComments(res.data);
       } catch (err) {
         console.error('Failed to fetch comments:', err);
-        alert(err.response?.data?.error || 'Failed to load comments');
+        setError(err.response?.data?.error || 'Failed to load comments');
       } finally {
         setLoading(false);
       }
@@ -140,7 +161,7 @@ function PostDetails() {
       setNewComment("");
     } catch (err) {
       console.error('Failed to add comment:', err);
-      alert(err.response?.status === 401 ? 'Please sign in to comment' : 'Failed to add comment. Please try again.');
+      setError(err.response?.status === 401 ? 'Please sign in to comment' : 'Failed to add comment');
     } finally {
       setLoading(false);
     }
@@ -170,103 +191,175 @@ function PostDetails() {
     }
   };
 
+  const handleOptionsToggle = (e) => {
+    e.stopPropagation();
+    setShowOptions(prev => !prev);
+  };
+
+  const handleDelete = () => {
+    setShowDeletePopup(true);
+  };
+
+  const confirmDelete = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please sign in to delete this post');
+      setShowDeletePopup(false);
+      return;
+    }
+
+    try {
+      await axios.delete(`http://localhost:5000/api/posts/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setShowDeletePopup(false);
+      navigate('/');
+    } catch (err) {
+      console.error('Failed to delete post:', err);
+      setError(err.response?.data?.error || 'Failed to delete post');
+      setShowDeletePopup(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeletePopup(false);
+  };
 
   if (!post) return <div>Loading...</div>;
 
+  const isOwner = userId && post.user_id === userId;
+
   return (
     <div className="container">
-      <div className="post-details">
-        <div className="post-header">
-          <img
-  src={post.profile_photo ? `http://localhost:5000/uploads/${post.profile_photo}` : "/default.jpg"}
-            alt="profile"
-            className="profile-pic"
-          />
-          <div className="user">
-            <h5>{post.username}</h5>
-            <small>{formatDate(post.created_at)}</small>
-          </div>
+      <div className="homepage">
+        <div className="layer left-layer">
+          <h1>Left</h1>
         </div>
-        {post.featured_image && (
-          <img
-            src={`http://localhost:5000/uploads/${post.featured_image}`}
-            alt="featured"
-            className="featured-image"
-          />
-        )}
-        <h1>{post.title}</h1>
-        {post.content && <p>{post.content}</p>} {/* Full content */}
-        <p className="tags">
-          {post.tags?.split(",").map(tag => (
-            <span key={tag} className="tag">#{tag.trim()}</span>
-          ))}
-        </p>
-        <div className="post-stats">
-          <span><FaEye /> {post.views || 0}</span>
-          <span 
-            className={`like-btn ${isLiked ? "liked" : ""}`} 
-            onClick={toggleLike}
-          >
-            {isLiked ? <FaHeart /> : <FaRegHeart />} {post.likes || 0}
-          </span>
-          <span 
-            className={`bookmark-btn ${isBookmarked ? "bookmarked" : ""}`} 
-            onClick={toggleBookmark}
-          >
-            {isBookmarked ? <FaBookmark /> : <FaRegBookmark />} 
-          </span>
-          <span 
-            className="comment-btn" 
-            onClick={toggleComments}
-          >
-            <FaComment /> {post.comments || 0}
-          </span>
-        </div>
-        {error && <p className="error-message">{error}</p>}
-
-        {showComments && (
-          <div className="comments-section">
-            {loading ? (
-              <p>Loading comments...</p>
-            ) : (
-              <>
-                <div className="comments-list">
-                  {comments.length > 0 ? (
-                    comments.map(comment => (
-                      <div key={comment.id} className="comment">
-                        <img
-                          src={comment.profile_photo || "/default.png"}
-                          alt="profile"
-                          className="profile-pic small"
-                        />
-                        <div className="comment-content">
-                          <h6>{comment.username}</h6>
-                          <p>{comment.comment}</p>
-                          <small>{formatDate(comment.created_at)}</small>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No comments yet. Be the first to comment!</p>
+        <div className="layer middle-layer">
+          <div className="post-details">
+            <div className="post-header">
+              <img
+                src={post.profile_photo ? `http://localhost:5000/uploads/${post.profile_photo}` : "/default.jpg"}
+                alt="profile"
+                className="profile-pic"
+              />
+              <div className="user">
+                <h5>{post.username}</h5>
+                <small>{formatDate(post.created_at)}</small>
+              </div>
+              {isOwner && (
+                <span
+                  ref={optionsRef}
+                  className="options-btn"
+                  onClick={handleOptionsToggle}
+                >
+                  <FaEllipsisV />
+                  {showOptions && (
+                    <div className="options-dropdown">
+                      <button onClick={() => navigate(`/create-post`, { state: { post } })}>Edit</button>
+                      <button onClick={handleDelete}>Delete</button>
+                    </div>
                   )}
-                </div>
-                <form onSubmit={handleAddComment} className="add-comment-form">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Add a comment..."
-                    rows="3"
-                    required
-                  />
-                  <button type="submit" disabled={loading}>
-                    {loading ? 'Posting...' : 'Comment'}
-                  </button>
-                </form>
-              </>
+                </span>
+              )}
+            </div>
+            {post.featured_image && (
+              <img
+                src={`http://localhost:5000/uploads/${post.featured_image}`}
+                alt="featured"
+                className="featured-image"
+              />
+            )}
+            <h1>{post.title}</h1>
+            {post.content && <p>{post.content}</p>}
+            <p className="tags">
+              {post.tags?.split(",").map(tag => (
+                <span key={tag} className="tag">#{tag.trim()}</span>
+              ))}
+            </p>
+            <div className="post-stats">
+              <span><FaEye /> {post.views || 0}</span>
+              <span 
+                className={`like-btn ${isLiked ? "liked" : ""}`} 
+                onClick={toggleLike}
+              >
+                {isLiked ? <FaHeart /> : <FaRegHeart />} {post.likes || 0}
+              </span>
+              <span 
+                className={`bookmark-btn ${isBookmarked ? "bookmarked" : ""}`} 
+                onClick={toggleBookmark}
+              >
+                {isBookmarked ? <FaBookmark /> : <FaRegBookmark />} 
+              </span>
+              <span 
+                className="comment-btn" 
+                onClick={toggleComments}
+              >
+                <FaComment /> {post.comments || 0}
+              </span>
+            </div>
+            {error && <p className="error-message">{error}</p>}
+
+            {showComments && (
+              <div className="comments-section">
+                {loading ? (
+                  <p>Loading comments...</p>
+                ) : (
+                  <>
+                    <div className="comments-list">
+                      {comments.length > 0 ? (
+                        comments.map(comment => (
+                          <div key={comment.id} className="comment">
+                            <img
+                              src={comment.profile_photo ? `http://localhost:5000/uploads/${comment.profile_photo}` : "/default.jpg"}
+                              alt="profile"
+                              className="profile-pic small"
+                            />
+                            <div className="comment-content">
+                              <h6>{comment.username}</h6>
+                              <p>{comment.comment}</p>
+                              <small>{formatDate(comment.created_at)}</small>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p>No comments yet. Be the first to comment!</p>
+                      )}
+                    </div>
+                    <form onSubmit={handleAddComment} className="add-comment-form">
+                      <textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        rows="3"
+                        required
+                      />
+                      <button type="submit" disabled={loading}>
+                        {loading ? 'Posting...' : 'Comment'}
+                      </button>
+                    </form>
+                  </>
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
+        <div className="layer right-layer">
+          <h1>Right</h1>
+        </div>
       </div>
+
+      {showDeletePopup && (
+        <div className="delete-popup" ref={popupRef}>
+          <div className="popup-content">
+            <h3>Are you sure you want to delete this post?</h3>
+            <div className="popup-buttons">
+              <button onClick={confirmDelete}>Yes, I'm sure</button>
+              <button onClick={cancelDelete}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

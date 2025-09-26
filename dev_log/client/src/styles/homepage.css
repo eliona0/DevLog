@@ -425,3 +425,126 @@
 .post-card:hover {
   background-color: transparent !important;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Left Layer Styles */
+.left-layer h2 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  padding: 8px;
+  border-radius: 5px;
+}
+
+.search-bar input {
+  flex: 1;
+  border: none;
+  outline: none;
+}
+
+.nav-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-menu li {
+  margin-bottom: 10px;
+}
+
+.nav-menu a, .nav-menu li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-menu a:hover, .nav-menu li:hover {
+  color: #007bff;
+}
+
+/* Right Layer Styles */
+.right-layer h2 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+}
+
+.popular-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+}
+
+.popular-list li {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.popular-list a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-decoration: none;
+  color: #333;
+}
+
+.popular-list h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.popular-list span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #555;
+}
+
+.tags-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tags-cloud .tag {
+  background-color: #e0f0ff;
+  color: #0077cc;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+/* Enhance responsiveness */
+@media (max-width: 1024px) {
+  .left-layer, .right-layer {
+    order: 2; /* Stack sidebars below middle on mobile */
+  }
+}

@@ -18,11 +18,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 const authRoutes = require('./routes/authRoutes');
-const postRoutes = require('./routes/postRoutes');
+app.use('/api/auth', authRoutes); 
+const postRoutes = require('./routes/postRoutes');    
+app.use('/api/posts', postRoutes);
 
-
-app.use('/api/auth', authRoutes);     
-app.use('/api/posts', postRoutes);    
+const userRoutes = require('./routes/userRoutes');
+app.use('/api/user', userRoutes);
 
 const categoryRoutes = require('./routes/categoryRoutes');
 app.use('/api/categories', categoryRoutes);

@@ -249,5 +249,19 @@ exports.incrementView = async (req, res) => {
   }
 };
 
+exports.getPostsByUser = async (req, res) => {
+  try {
+    const [posts] = await db.query(
+      'SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC',
+      [req.params.userId]
+    );
+    res.json(posts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch user posts' });
+  }
+};
+
+
 // Export the multer middleware for use in routes
 exports.upload = upload;

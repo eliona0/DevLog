@@ -389,7 +389,7 @@ function HomePage() {
                 <li><Link to="/create-post"><FaPlus /> Create Post</Link></li>
                 <li><Link to="/bookmarks"><FaBookmark /> Bookmarks</Link></li>
                 <li><Link to="/profile"><FaUser /> Profile</Link></li>
-                <li><button className="signout-btn" onClick={handleLogout}><FaSignOutAlt /> Sign Out</button></li>
+                {/* <li><button className="signout-btn" onClick={handleLogout}><FaSignOutAlt /> Sign Out</button></li> */}
               </>
             )}
             {/* {!isLoggedIn && (

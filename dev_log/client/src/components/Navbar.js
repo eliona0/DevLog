@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/navbar.css';
+import { FaUser } from 'react-icons/fa';
 
 function Navbar() {
   const navigate = useNavigate();
@@ -70,7 +71,10 @@ function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-left">
-        <span className="logo">DevLog</span>
+        <span className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+  DevLog
+</span>
+
       </div>
 
       <div className="navbar-center">
@@ -89,14 +93,17 @@ function Navbar() {
             </button>
 
             <div className="dropdown">
-              <img
-  src={user && user.profile_photo 
-    ? `http://localhost:5000/uploads/${user.profile_photo}` 
-    : "/default.jpg"}
+             <img
+  src={
+    user?.profile_photo
+      ? `http://localhost:5000/uploads/${user.profile_photo}`
+      : `http://localhost:5000/uploads/default.jpg`
+  }
   alt="Profile"
   className="profile-pic"
   onClick={toggleDropdown}
 />
+
 
 
               {dropdownOpen && (
@@ -105,6 +112,8 @@ function Navbar() {
                   <button onClick={handleCreate}>Create Post</button>
                   <button onClick={handleBookmark}>Bookmarks</button>
                   <button onClick={handleSettings}>Settings</button>
+                  <button onClick={() => navigate('/profile')}>Profile
+                  </button>
                   <button className="signout-btn" onClick={handleLogout}>
                     Sign Out
                   </button>

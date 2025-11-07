@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import { FaUserEdit, FaHeart, FaEye, FaComment } from "react-icons/fa";
+import { FaUserEdit } from "react-icons/fa";
 import "../styles/profile.css";
 
 const ProfilePage = () => {
@@ -25,7 +25,7 @@ const ProfilePage = () => {
         });
         setUser(userRes.data);
 
-        // Fetch that user's posts
+        // Fetch user's posts
         const postsRes = await axios.get(
           `http://localhost:5000/api/posts/user/${userRes.data.id}`,
           {
@@ -56,35 +56,49 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="profile-container">
-      <div className="profile-card">
+    <div className="profile-page">
+      {/* ---- Top Section: Profile Info ---- */}
+      <section className="profile-header">
         <div className="profile-banner"></div>
 
-        <div className="profile-info">
+        <div className="profile-content">
           <img
             src={`http://localhost:5000/uploads/${user.profile_photo}`}
             alt={user.username}
             className="profile-photo"
           />
+          <div className="profile-text">
+            <h2 className="profile-name">
+              {user.fullName || user.full_name || "Unnamed User"}
+            </h2>
+            <p className="profile-username">@{user.username}</p>
+            <p className="profile-bio">{user.bio || "No bio added yet."}</p>
 
-          <h2 className="profile-name">{user.fullName}</h2>
-          <p className="profile-username">@{user.username}</p>
+            <div className="profile-details">
+              <p>
+                <strong>Email:</strong> {user.email}
+              </p>
+              <p>
+                <strong>Joined:</strong>{" "}
+                {new Date(user.created_at).toLocaleDateString()}
+              </p>
+            </div>
 
-          <div className="profile-details">
-            <p><strong>Email:</strong> {user.email}</p>
-            <p><strong>Name:</strong> {user.fullName}</p>
-            <p><strong>Bio:</strong> {user.bio || "No bio added yet."}</p>
-            <p><strong>Joined:</strong> {new Date(user.created_at).toLocaleDateString()}</p>
+            <button
+              onClick={() => navigate("/edit-profile")}
+              className="edit-btn"
+            >
+              <FaUserEdit /> Edit Profile
+            </button>
           </div>
-
-          <button onClick={() => navigate("/edit-profile")} className="edit-btn">
-            <FaUserEdit /> Edit Profile
-          </button>
         </div>
-      </div>
+      </section>
 
-      <div className="user-posts-section">
-        <h3>{user.username}'s Posts</h3>
+      {/* ---- Bottom Section: User Posts ---- */}
+      <section className="user-posts-section">
+        <h3 className="posts-title">
+          {(user.fullName || user.full_name || "User") + "'s Posts"}
+        </h3>
         {posts.length === 0 ? (
           <p className="no-posts">You haven’t posted anything yet.</p>
         ) : (
@@ -99,17 +113,16 @@ const ProfilePage = () => {
                       className="post-image"
                     />
                   )}
-                  <h4>{post.title}</h4>
+                  <h4 className="post-title">{post.title}</h4>
                   <p className="post-preview">
                     {post.content.slice(0, 100)}...
                   </p>
-                  
                 </Link>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 };

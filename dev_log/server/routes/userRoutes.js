@@ -1,19 +1,28 @@
+// server/routes/userRoutes.js
+
 const express = require('express');
 const router = express.Router();
 const authenticateToken = require('../middleware/authMiddleware');
 const db = require('../config/db');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// Ensure upload folder exists
+const uploadDir = 'uploads/profile_photos';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Configure multer for profile photo uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/profile_photos');
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `user_${req.user.id}${ext}`);
-  }
+  },
 });
 
 const upload = multer({ storage });
@@ -41,11 +50,21 @@ router.get('/', authenticateToken, async (req, res) => {
 // 🟡 Update user profile
 router.put('/', authenticateToken, upload.single('profile_photo'), async (req, res) => {
   try {
-    const { fullName, bio } = req.body;
-    const profilePhoto = req.file ? `uploads/profile_photos/${req.file.filename}` : null;
+    const { username, email, fullName, bio } = req.body;
+    const profilePhoto = req.file ? `profile_photos/${req.file.filename}` : null;
 
     const fields = [];
     const values = [];
+
+    if (username) {
+      fields.push('username = ?');
+      values.push(username);
+    }
+
+    if (email) {
+      fields.push('email = ?');
+      values.push(email);
+    }
 
     if (fullName) {
       fields.push('fullName = ?');

@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import CreatePostForm from './components/CreatePostForm';
 import PostDetails from "./pages/PostDetails";
 import ProfilePage from './pages/ProfilePage';
+import EditProfile from './pages/EditProfile';
 
 function AppContent() {
   const location = useLocation();
@@ -20,6 +21,8 @@ function AppContent() {
         <Route path="/posts/:id" element={<PostDetails />} /> {/* Fix: Changed /post to /posts */}
         <Route path="/profile" element={<ProfilePage/>} />
         <Route path="/profile/:username" element={<ProfilePage />} />
+        <Route path="/edit-profile" element={<EditProfile/>} />
+
       </Routes>
     </>
   );

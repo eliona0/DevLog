@@ -50,19 +50,24 @@
 
 .submit-button {
   padding: 12px;
-  background-color: #2563eb;
-  color: white;
+  background: linear-gradient(90deg, #60a5fa, #1d4ed8);
+  color: #fff;
   border: none;
   border-radius: 8px;
-  font-weight: bold;
+  font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(29, 78, 216, 0.25);
 }
 
 .submit-button:hover {
-  background-color: #1e40af;
+  background: linear-gradient(90deg, #3b82f6, #1e3a8a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(29, 78, 216, 0.35);
 }
+
+
 
 .create-post-form select[multiple] {
   min-height: 120px;
